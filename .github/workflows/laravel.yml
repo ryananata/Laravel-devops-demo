@@ -1,0 +1,43 @@
+name: Laravel CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  laravel-tests:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check PHP version
+        run: php --version
+
+      - name: Check Composer version
+        run: composer --version
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Prepare environment
+        run: |
+          copy .env.example .env
+          php artisan key:generate
+
+      - name: Create SQLite database
+        run: |
+          if (!(Test-Path database\database.sqlite)) {
+              New-Item database\database.sqlite -ItemType File
+          }
+
+      - name: Run migrations
+        run: php artisan migrate --force
+
+      - name: Run Laravel tests
+        run: php artisan test
