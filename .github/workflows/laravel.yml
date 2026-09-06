@@ -1,4 +1,4 @@
-name: Laravel CI
+name: Laravel CI/CD
 
 on:
   push:
@@ -9,35 +9,64 @@ on:
       - main
 
 jobs:
-  laravel-tests:
-    runs-on: self-hosted
+  deploy:
+    runs-on: [self-hosted, Linux, X64]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check PHP version
-        run: php --version
-
-      - name: Check Composer version
-        run: composer --version
+      - name: Check environment
+        run: |
+          whoami
+          php --version
+          composer --version
+          rsync --version
 
       - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
-      - name: Prepare environment
         run: |
-          copy .env.example .env
-          php artisan key:generate
+          composer install \
+            --no-interaction \
+            --prefer-dist \
+            --optimize-autoloader
 
-      - name: Create SQLite database
+      - name: Prepare Laravel environment
         run: |
-          if (!(Test-Path database\database.sqlite)) {
-              New-Item database\database.sqlite -ItemType File
-          }
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          fi
+
+          php artisan key:generate --force
+
+          touch database/database.sqlite
 
       - name: Run migrations
         run: php artisan migrate --force
 
       - name: Run Laravel tests
         run: php artisan test
+
+      - name: Deploy to Nginx
+        run: |
+          echo "Deploying Laravel application..."
+
+          sudo mkdir -p /var/www/my-app
+
+          sudo rsync -av \
+            --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            ./ /var/www/my-app/
+
+          sudo chown -R vboxuser:vboxuser /var/www/my-app
+
+          sudo chmod -R 755 /var/www/my-app
+
+          sudo chmod -R 775 \
+            /var/www/my-app/storage \
+            /var/www/my-app/bootstrap/cache \
+            /var/www/my-app/database
+
+          sudo systemctl reload nginx
+
+          echo "Deployment completed!"
