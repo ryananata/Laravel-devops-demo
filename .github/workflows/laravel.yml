@@ -1,4 +1,4 @@
-name: Automated SSH Deployment
+name: Clean Self-Hosted Deployment
 
 on:
   push:
@@ -7,16 +7,21 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+
     steps:
-      - name: SSH Remote Commands to Pull Latest Code
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            cd /var/www/my-app-githubactions
-            git fetch origin main
-            git reset --hard origin/main
+      - name: Checkout Repository Code
+        uses: actions/checkout@v4
+
+      - name: Sync to App Directory
+        run: |
+          echo "🚀 Memulai sinkronisasi file ke /var/www/my-app-runner..."
+          sudo mkdir -p /var/www/my-app-runner
+          sudo rsync -av --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.env' \
+            ./ /var/www/my-app-runner/
+          sudo chown -R deployer:deployer /var/www/my-app-runner
+          sudo chmod -R 755 /var/www/my-app-runner
+          echo "✅ Sync selesai!"
