@@ -1,75 +1,22 @@
-name: Laravel CI/CD
+name: Automated SSH Deployment
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   deploy:
-    runs-on: [self-hosted, Linux, X64]
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Check environment
-        run: |
-          whoami
-          php --version
-          composer --version
-          rsync --version
-
-      - name: Install Composer dependencies
-        run: |
-          composer config --global process-timeout 1200
-          composer config preferred-install.laravel/pint source
-          composer install \
-            --no-interaction \
-            --prefer-dist \
-            --no-progress \
-            --optimize-autoloader
-
-      - name: Prepare Laravel environment
-        run: |
-          if [ ! -f .env ]; then
-            cp .env.example .env
-          fi
-
-          php artisan key:generate --force
-
-          touch database/database.sqlite
-
-      - name: Run migrations
-        run: php artisan migrate --force
-
-      - name: Run Laravel tests
-        run: php artisan test
-
-      - name: Deploy to Nginx
-        run: |
-          echo "Deploying Laravel application..."
-
-          sudo mkdir -p /var/www/my-app
-
-          sudo rsync -av \
-            --delete \
-            --exclude='.git' \
-            --exclude='.github' \
-            ./ /var/www/my-app/
-
-          sudo chown -R vboxuser:vboxuser /var/www/my-app
-
-          sudo chmod -R 755 /var/www/my-app
-
-          sudo chmod -R 775 \
-            /var/www/my-app/storage \
-            /var/www/my-app/bootstrap/cache \
-            /var/www/my-app/database
-
-          sudo systemctl reload nginx
-
-          echo "Deployment completed!"
+      - name: SSH Remote Commands to Pull Latest Code
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd /var/www/my-app-githubactions
+            git fetch origin main
+            git reset --hard origin/main
