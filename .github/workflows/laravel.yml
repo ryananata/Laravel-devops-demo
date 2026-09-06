@@ -28,7 +28,8 @@ jobs:
           composer install \
             --no-interaction \
             --prefer-dist \
-            --optimize-autoloader
+            --optimize-autoloader \
+            --no-progress
 
       - name: Prepare Laravel environment
         run: |
