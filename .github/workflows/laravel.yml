@@ -25,11 +25,12 @@ jobs:
 
       - name: Install Composer dependencies
         run: |
+          composer config --global process-timeout 1200
           composer install \
             --no-interaction \
             --prefer-dist \
-            --optimize-autoloader \
-            --no-progress
+            --no-progress \
+            --optimize-autoloader
 
       - name: Prepare Laravel environment
         run: |
